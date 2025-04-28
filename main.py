@@ -1,33 +1,38 @@
 import asyncio
-from playwright.async_api import async_playwright
 import re
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 
 async def main():
-    async with async_playwright() as p:
-        # Запускаем браузер
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
+    try:
+        # Запуск Playwright
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
 
-        # Переходим на нужную страницу
-        await page.goto('https://www.dyli.io/drop/1930')  # Измените на нужный URL
+            # Переход на нужную страницу
+            await page.goto('https://www.dyli.io/drop/1930')  # URL твоей страницы
 
-        # Ждем, пока страница полностью загрузится
-        await page.wait_for_selector('text="lowest listing"')  # Ждем, что текст "lowest listing" появится на странице
+            # Ждем, пока страница полностью загрузится
+            await page.wait_for_timeout(5000)  # Ждем 5 секунд для полной загрузки страницы
 
-        # Получаем весь текст страницы
-        content = await page.content()
+            # Получаем весь HTML контент страницы
+            content = await page.content()
 
-        # Ищем цену перед "lowest listing" с помощью регулярного выражения
-        match = re.search(r"\$(\d+)\s*lowest listing", content, re.IGNORECASE)
-        
-        if match:
-            price = match.group(1)  # Извлекаем цену из группы
-            print(f"Lowest listing price: ${price}")
-        else:
-            print("Lowest listing not found.")
+            # Используем регулярное выражение для поиска текста
+            match = re.search(r"\$(\d+)\s*lowest listing", content, re.IGNORECASE)
 
-        # Закрываем браузер
-        await browser.close()
+            if match:
+                lowest_listing = match.group(1)  # Извлекаем цену из группы
+                print(f"Lowest listing: ${lowest_listing}")
+            else:
+                print("Lowest listing not found.")
 
-# Запускаем асинхронный цикл
+            await browser.close()
+
+    except PlaywrightTimeoutError as e:
+        print(f"Ошибка: Истекло время ожидания при загрузке страницы или элемент не найден. {e}")
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+
+# Запуск асинхронной функции
 asyncio.run(main())
