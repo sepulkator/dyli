@@ -1,66 +1,70 @@
 import asyncio
-from playwright.async_api import async_playwright
+import signal
+from playwright.async_api import async_playwright, expect
+import datetime
+
+stop_flag = asyncio.Event()
+
+def signal_handler(signum, frame):
+    print(f"[{datetime.datetime.now()}] Получен сигнал остановки ({signal.Signals(signum).name}).")
+    stop_flag.set()
 
 async def main():
+    signal.signal(signal.SIGTERM, signal_handler)
+
     try:
         async with async_playwright() as p:
             try:
-                # Запускаем браузер
                 browser = await p.chromium.launch(headless=True)
                 try:
                     page = await browser.new_page()
                     try:
-                        # Переходим на нужную страницу
                         await page.goto("https://www.dyli.io/drop/1930", timeout=60000)
-                        print("Страница успешно загружена.")
+                        print(f"[{datetime.datetime.now()}] Страница успешно загружена.")
 
-                        # Выполняем JavaScript для получения текста цены (с дополнительным логированием)
-                        try:
-                            price = await page.evaluate('''() => {
-                                console.log('Начинаем поиск цены...');
-                                const lowestListingSpans = document.querySelectorAll('span');
-                                let foundListingSpan = null;
-                                for (const span of lowestListingSpans) {
-                                    if (span.textContent && span.textContent.trim() === 'lowest listing') {
-                                        console.log('Нашли span с текстом "lowest listing":', span);
-                                        foundListingSpan = span;
-                                        break;
-                                    }
-                                }
+                        while not stop_flag.is_set():
+                            print(f"[{datetime.datetime.now()}] Начинаю проверку цены...")
+                            try:
+                                # Явное ожидание появления элемента "lowest listing"
+                                await page.wait_for_selector('span.text-\[var\(--text-slate-700\)\]:has-text("lowest listing")', timeout=10000)
+                                print(f"[{datetime.datetime.now()}] Элемент 'lowest listing' найден.")
 
-                                if (foundListingSpan) {
-                                    const parentDiv = foundListingSpan.parentElement;
-                                    if (parentDiv) {
-                                        const priceSpan = parentDiv.querySelector('span.font-bold');
-                                        if (priceSpan) {
-                                            console.log('Нашли span с ценой:', priceSpan.textContent);
-                                            return priceSpan.textContent;
+                                price = await page.evaluate('''() => {
+                                    const lowestListingSpan = document.querySelector('span.text-\[var\(--text-slate-700\)\]:has-text("lowest listing")');
+                                    if (lowestListingSpan) {
+                                        const parentDiv = lowestListingSpan.parentElement;
+                                        if (parentDiv) {
+                                            const priceSpan = parentDiv.querySelector('span.font-bold');
+                                            if (priceSpan) {
+                                                return priceSpan.textContent;
+                                            } else {
+                                                console.log('Не нашли span с классом "font-bold" в родительском элементе.');
+                                            }
                                         } else {
-                                            console.log('Не нашли span с классом "font-bold" в родительском элементе.');
+                                            console.log('У span "lowest listing" нет родительского элемента.');
                                         }
                                     } else {
-                                        console.log('У span "lowest listing" нет родительского элемента.');
+                                        console.log('Не нашли span с текстом "lowest listing".');
                                     }
-                                } else {
-                                    console.log('Не нашли ни одного span с текстом "lowest listing".');
-                                }
-                                return null;
-                            }''')
+                                    return null;
+                                }''')
 
-                            if price:
-                                print(f"Lowest listing price (via JS): {price}")
-                            else:
-                                print("Не удалось найти цену 'lowest listing' с помощью JavaScript.")
+                                if price:
+                                    print(f"[{datetime.datetime.now()}] Lowest listing price (via JS): {price}")
+                                else:
+                                    print(f"[{datetime.datetime.now()}] Не удалось извлечь цену.")
 
-                        except Exception as e:
-                            print(f"Ошибка при выполнении JavaScript: {e}")
+                            except Exception as e:
+                                print(f"[{datetime.datetime.now()}] Ошибка при проверке цены: {e}")
+
+                            await asyncio.sleep(60 * 5)
 
                     except Exception as e:
                         print(f"Ошибка при работе со страницей: {e}")
                     finally:
                         if browser and browser.is_connected:
                             await browser.close()
-                            print("Браузер закрыт.")
+                            print(f"[{datetime.datetime.now()}] Браузер закрыт.")
                 except Exception as e:
                     print(f"Ошибка при запуске браузера или создании страницы: {e}")
             except Exception as e:
@@ -68,5 +72,5 @@ async def main():
     except Exception as e:
         print(f"Общая ошибка в main: {e}")
 
-# Запуск асинхронной функции
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
