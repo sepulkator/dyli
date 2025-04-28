@@ -2,27 +2,42 @@ import asyncio
 from playwright.async_api import async_playwright
 
 async def main():
-    async with async_playwright() as p:
-        # Запускаем браузер
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
+    try:
+        async with async_playwright() as p:
+            try:
+                # Запускаем браузер
+                browser = await p.chromium.launch(headless=True)
+                try:
+                    page = await browser.new_page()
+                    try:
+                        # Переходим на нужную страницу
+                        await page.goto("https://www.dyli.io/drop/1930", timeout=60000)
+                        print("Страница успешно загружена.")
 
-        # Переходим на нужную страницу
-        await page.goto("https://www.dyli.io/drop/1930")
+                        # Ожидаем появления элемента с текстом "lowest listing"
+                        try:
+                            await page.wait_for_selector('span:has-text("lowest listing")', timeout=60000)
+                            print("Элемент 'lowest listing' найден.")
 
-        # Ожидаем появления нужного элемента на странице
-        try:
-            # Ждем появления элемента "lowest listing" и убеждаемся, что это нужный элемент
-            await page.wait_for_selector('span.text-\[var\(--text-slate-700\)\]:has-text("lowest listing")', timeout=60000)
+                            # Используем селектор, привязываясь к тексту "lowest listing" и следующему div с ценой
+                            price = await page.locator('div:has(span:has-text("lowest listing")) + div span.font-bold').text_content()
+                            print(f"Lowest listing price: {price}")
 
-            # Используем более специфичный CSS-селектор для получения цены
-            price = await page.locator('div:has(span.text-\[var\(--text-slate-700\)\]:has-text("lowest listing")) + div span.font-bold').text_content()
-            print(f"Lowest listing price: {price}")
-        except Exception as e:
-            print(f"Ошибка: {e}")
+                        except Exception as e:
+                            print(f"Ошибка при поиске или извлечении цены: {e}")
 
-        # Закрываем браузер
-        await browser.close()
+                    except Exception as e:
+                        print(f"Ошибка при работе со страницей: {e}")
+                    finally:
+                        if browser and browser.is_connected:
+                            await browser.close()
+                            print("Браузер закрыт.")
+                except Exception as e:
+                    print(f"Ошибка при запуске браузера или создании страницы: {e}")
+            except Exception as e:
+                print(f"Ошибка при инициализации Playwright: {e}")
+    except Exception as e:
+        print(f"Общая ошибка в main: {e}")
 
 # Запуск асинхронной функции
 asyncio.run(main())
