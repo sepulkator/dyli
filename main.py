@@ -11,16 +11,16 @@ async def fetch_lowest_listing_price():
         await page.goto("https://www.dyli.io/drop/1930")  # Вставь нужный URL
         
         try:
-            # Ожидаем появления элемента с текстом lowest listing
-            await page.wait_for_selector("span:text('lowest listing')")
+            # Ожидаем появления первого элемента с текстом "lowest listing"
+            lowest_listing_element = await page.locator('span:text("lowest listing")').first()
             
-            # Ищем родительский div для lowest listing
-            parent_div = await page.locator('span:text("lowest listing")').locator('..')  # Родительский div
-            
-            # Извлекаем цену из предыдущего элемента, который является числом перед lowest listing
+            # Находим родительский div для этого элемента
+            parent_div = await lowest_listing_element.locator('..')  # Это родительский элемент
+
+            # Ищем цену в родительском div
             price_text = await parent_div.locator("span.font-bold").inner_text()
             
-            # Преобразуем в число
+            # Преобразуем в число (с помощью регулярного выражения)
             match = re.search(r"\$(\d+)", price_text)
             if match:
                 price = match.group(1)
