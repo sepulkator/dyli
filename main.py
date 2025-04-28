@@ -62,7 +62,7 @@ async def main():
                             except Exception as e:
                                 print(f"[{datetime.datetime.now()}] Ошибка при проверке цены: {e}")
 
-                            await asyncio.sleep(5)  # Минимальная задержка для отладки
+                            await asyncio.sleep(5)
 
                     except Exception as e:
                         print(f"Ошибка при работе со страницей: {e}")
