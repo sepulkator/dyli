@@ -1,17 +1,3 @@
-import asyncio
-import signal
-from playwright.async_api import async_playwright, expect
-import datetime
-import random
-
-print("Скрипт main.py запущен!")
-
-stop_flag = asyncio.Event()
-
-def signal_handler(signum, frame):
-    print(f"[{datetime.datetime.now()}] Получен сигнал остановки ({signal.Signals(signum).name}).")
-    stop_flag.set()
-
 async def main():
     signal.signal(signal.SIGTERM, signal_handler)
 
@@ -74,8 +60,8 @@ async def main():
                     print(f"Ошибка при запуске браузера или создании страницы: {e}")
             except Exception as e:
                 print(f"Ошибка при инициализации Playwright: {e}")
-        except Exception as e:
-            print(f"Общая ошибка в main: {e}")
+    except Exception as e:
+        print(f"Общая ошибка в main: {e}")
 
-    if __name__ == "__main__":
-        asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
