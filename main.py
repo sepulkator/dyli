@@ -14,16 +14,18 @@ async def main():
                         await page.goto("https://www.dyli.io/drop/1930", timeout=60000)
                         print("Страница успешно загружена.")
 
-                        # Выполняем JavaScript для получения текста цены (с учетом новой структуры)
+                        # Выполняем JavaScript для получения текста цены (поиск по тексту)
                         try:
                             price = await page.evaluate('''() => {
-                                const lowestListingSpan = document.querySelector('span.text-\[var\(--text-slate-700\)\]:has-text("lowest listing")');
-                                if (lowestListingSpan) {
-                                    const parentDiv = lowestListingSpan.parentElement;
-                                    if (parentDiv) {
-                                        const priceSpan = parentDiv.querySelector('span.font-bold');
-                                        if (priceSpan) {
-                                            return priceSpan.textContent;
+                                const spans = document.querySelectorAll('span');
+                                for (const span of spans) {
+                                    if (span.textContent && span.textContent.trim() === 'lowest listing') {
+                                        const parentDiv = span.parentElement;
+                                        if (parentDiv) {
+                                            const priceSpan = parentDiv.querySelector('span.font-bold');
+                                            if (priceSpan) {
+                                                return priceSpan.textContent;
+                                            }
                                         }
                                     }
                                 }
