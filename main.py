@@ -2,6 +2,9 @@ import asyncio
 import signal
 from playwright.async_api import async_playwright, expect
 import datetime
+import random
+
+print("Скрипт main.py запущен!")  # Добавили в самое начало
 
 stop_flag = asyncio.Event()
 
@@ -14,10 +17,13 @@ async def main():
 
     try:
         async with async_playwright() as p:
+            print("Playwright инициализирован.")  # Добавили
             try:
                 browser = await p.chromium.launch(headless=True)
+                print("Браузер запущен.")  # Добавили
                 try:
                     page = await browser.new_page()
+                    print("Страница создана.")  # Добавили
                     try:
                         await page.goto("https://www.dyli.io/drop/1930", timeout=60000)
                         print(f"[{datetime.datetime.now()}] Страница успешно загружена.")
@@ -25,7 +31,6 @@ async def main():
                         while not stop_flag.is_set():
                             print(f"[{datetime.datetime.now()}] Начинаю проверку цены...")
                             try:
-                                # Явное ожидание появления элемента "lowest listing"
                                 await page.wait_for_selector('span.text-\[var\(--text-slate-700\)\]:has-text("lowest listing")', timeout=10000)
                                 print(f"[{datetime.datetime.now()}] Элемент 'lowest listing' найден.")
 
@@ -57,7 +62,7 @@ async def main():
                             except Exception as e:
                                 print(f"[{datetime.datetime.now()}] Ошибка при проверке цены: {e}")
 
-                            await asyncio.sleep(60 * 5)
+                            await asyncio.sleep(5)  # Минимальная задержка для отладки
 
                     except Exception as e:
                         print(f"Ошибка при работе со страницей: {e}")
@@ -69,8 +74,8 @@ async def main():
                     print(f"Ошибка при запуске браузера или создании страницы: {e}")
             except Exception as e:
                 print(f"Ошибка при инициализации Playwright: {e}")
-    except Exception as e:
-        print(f"Общая ошибка в main: {e}")
+        except Exception as e:
+            print(f"Общая ошибка в main: {e}")
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    if __name__ == "__main__":
+        asyncio.run(main())
