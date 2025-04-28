@@ -15,17 +15,27 @@ async def main():
             # Ждем, пока страница полностью загрузится
             await page.wait_for_timeout(5000)  # Ждем 5 секунд для полной загрузки страницы
 
-            # Получаем весь HTML контент страницы
-            content = await page.content()
+            try:
+                # Ожидаем появления элемента с текстом "lowest listing"
+                await page.wait_for_selector("text=lowest listing", timeout=60000)  # Увеличиваем время ожидания до 60 секунд
+                print("Элемент 'lowest listing' найден!")
+            except PlaywrightTimeoutError:
+                print("Не удалось найти элемент 'lowest listing' на странице. Попробуй позже.")
 
-            # Используем регулярное выражение для поиска текста
-            match = re.search(r"\$(\d+)\s*lowest listing", content, re.IGNORECASE)
+            # Получаем все элементы с текстом "lowest listing"
+            elements = await page.locator("text=lowest listing").all_text_contents()
 
-            if match:
-                lowest_listing = match.group(1)  # Извлекаем цену из группы
-                print(f"Lowest listing: ${lowest_listing}")
+            # Если найдено больше одного элемента, извлекаем первый
+            if elements:
+                lowest_listing_text = elements[0]  # Берем первый найденный элемент
+                match = re.search(r"\$(\d+)\s*lowest listing", lowest_listing_text, re.IGNORECASE)
+                if match:
+                    lowest_listing = match.group(1)  # Извлекаем цену из группы
+                    print(f"Lowest listing: ${lowest_listing}")
+                else:
+                    print("Не удалось извлечь цену из текста.")
             else:
-                print("Lowest listing not found.")
+                print("Не найдено элементов с текстом 'lowest listing'.")
 
             await browser.close()
 
