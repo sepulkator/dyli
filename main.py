@@ -14,20 +14,35 @@ async def main():
                         await page.goto("https://www.dyli.io/drop/1930", timeout=60000)
                         print("Страница успешно загружена.")
 
-                        # Выполняем JavaScript для получения текста цены (поиск по тексту)
+                        # Выполняем JavaScript для получения текста цены (с дополнительным логированием)
                         try:
                             price = await page.evaluate('''() => {
-                                const spans = document.querySelectorAll('span');
-                                for (const span of spans) {
+                                console.log('Начинаем поиск цены...');
+                                const lowestListingSpans = document.querySelectorAll('span');
+                                let foundListingSpan = null;
+                                for (const span of lowestListingSpans) {
                                     if (span.textContent && span.textContent.trim() === 'lowest listing') {
-                                        const parentDiv = span.parentElement;
-                                        if (parentDiv) {
-                                            const priceSpan = parentDiv.querySelector('span.font-bold');
-                                            if (priceSpan) {
-                                                return priceSpan.textContent;
-                                            }
-                                        }
+                                        console.log('Нашли span с текстом "lowest listing":', span);
+                                        foundListingSpan = span;
+                                        break;
                                     }
+                                }
+
+                                if (foundListingSpan) {
+                                    const parentDiv = foundListingSpan.parentElement;
+                                    if (parentDiv) {
+                                        const priceSpan = parentDiv.querySelector('span.font-bold');
+                                        if (priceSpan) {
+                                            console.log('Нашли span с ценой:', priceSpan.textContent);
+                                            return priceSpan.textContent;
+                                        } else {
+                                            console.log('Не нашли span с классом "font-bold" в родительском элементе.');
+                                        }
+                                    } else {
+                                        console.log('У span "lowest listing" нет родительского элемента.');
+                                    }
+                                } else {
+                                    console.log('Не нашли ни одного span с текстом "lowest listing".');
                                 }
                                 return null;
                             }''')
