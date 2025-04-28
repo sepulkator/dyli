@@ -1,42 +1,31 @@
 import asyncio
-import re
 from playwright.async_api import async_playwright
 
-# Настройки
-DYLI_URL = "https://www.dyli.io/drop/1930"
-CHECK_INTERVAL = 300  # проверять каждые 300 секунд (5 минут)
-
-async def check_lowest_listing(page):
-    await page.goto(DYLI_URL, wait_until="networkidle")
-    content = await page.content()
-
-    # Ищем "$<число> lowest listing" через регулярку
-    match = re.search(r"\$(\d+)\s*lowest listing", content, re.IGNORECASE)
-
-    if match:
-        price_usd = int(match.group(1))
-        print(f"✅ Lowest listing найден: ${price_usd}")
-        if price_usd > 0:
-            print(f"Токен выставлен за ${price_usd}")
-            # Здесь можно вставить отправку уведомления в Telegram
-        else:
-            print("❌ Lowest listing = 0 (нет активного листинга).")
-    else:
-        print("❌ Lowest listing не найден на странице.")
-
 async def main():
+    print("Скрипт запущен ✅")
+
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
+        
+        # Здесь урл страницы на dyli
+        await page.goto("https://www.dyli.io/drop/1930")
 
-        while True:
-            try:
-                await check_lowest_listing(page)
-            except Exception as e:
-                print(f"Ошибка: {e}")
-            await asyncio.sleep(CHECK_INTERVAL)
+        # Немного подождём для уверенности (если нужно)
+        await page.wait_for_timeout(2000)
+
+        # Ищем нужный элемент по тексту
+        element = await page.locator("text=lowest listing").first()
+        if element:
+            price_text = await element.text_content()
+            print(f"Найденное значение: {price_text}")
+        else:
+            print("Не удалось найти элемент с текстом 'lowest listing'")
 
         await browser.close()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        print(f"Ошибка при запуске: {e}")
