@@ -14,21 +14,28 @@ async def main():
                         await page.goto("https://www.dyli.io/drop/1930", timeout=60000)
                         print("Страница успешно загружена.")
 
-                        # Выполняем JavaScript для получения текста цены (попытка 2)
+                        # Выполняем JavaScript для получения текста цены (попытка 3)
                         try:
                             price = await page.evaluate('''() => {
                                 const spans = document.querySelectorAll('span');
                                 for (const span of spans) {
-                                    if (span.textContent.trim() === 'lowest listing') {
-                                        const parentDiv = span.parentElement;
-                                        if (parentDiv) {
-                                            const priceSpan = parentDiv.querySelector('span.font-bold');
+                                    if (span.textContent && span.textContent.trim() === 'lowest listing') {
+                                        console.log('Нашли span с текстом "lowest listing":', span); // Для отладки
+
+                                        let parent = span.parentElement;
+                                        while (parent) {
+                                            const priceSpan = parent.querySelector('span.font-bold');
                                             if (priceSpan) {
+                                                console.log('Нашли span с ценой:', priceSpan.textContent); // Для отладки
                                                 return priceSpan.textContent;
                                             }
+                                            parent = parent.parentElement;
                                         }
+                                        console.log('Не нашли span с ценой в родительских элементах.'); // Для отладки
+                                        return null;
                                     }
                                 }
+                                console.log('Не нашли span с текстом "lowest listing".'); // Для отладки
                                 return null;
                             }''')
 
