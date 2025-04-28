@@ -11,17 +11,22 @@ async def main():
         await page.goto('https://www.dyli.io/drop/1930')
         
         # Ждем, что элемент "lowest listing" появится на странице
-        element_locator = await page.locator('span:text("lowest listing")').first()  # Находим первый элемент с текстом "lowest listing"
-        parent_div = await element_locator.evaluate('el => el.closest("div")')  # Находим родительский div для этого элемента
+        elements = await page.locator('span:has-text("lowest listing")').all()  # Находим все элементы с текстом "lowest listing"
         
-        # Получаем цену из родительского div
-        price_text = await parent_div.locator('span.font-bold').inner_text()  # Извлекаем текст из первого элемента span с классом font-bold
-        price = re.search(r"\$(\d+)", price_text)
-        
-        if price:
-            print(f"Lowest listing price: ${price.group(1)}")
+        if elements:
+            # Для первого элемента ищем родительский div
+            parent_div = await elements[0].evaluate('el => el.closest("div")')
+            
+            # Получаем цену из родительского div
+            price_text = await page.locator('span.font-bold').inner_text()  # Извлекаем текст из первого элемента span с классом font-bold
+            price = re.search(r"\$(\d+)", price_text)
+            
+            if price:
+                print(f"Lowest listing price: ${price.group(1)}")
+            else:
+                print("Price not found")
         else:
-            print("Price not found")
+            print("No 'lowest listing' element found")
         
         await browser.close()
 
