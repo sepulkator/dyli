@@ -1,3 +1,17 @@
+import asyncio
+import signal
+from playwright.async_api import async_playwright, expect
+import datetime
+import random
+
+print("Скрипт main.py запущен!")
+
+stop_flag = asyncio.Event()
+
+def signal_handler(signum, frame):
+    print(f"[{datetime.datetime.now()}] Получен сигнал остановки ({signal.Signals(signum).name}).")
+    stop_flag.set()
+
 async def main():
     signal.signal(signal.SIGTERM, signal_handler)
 
