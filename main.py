@@ -13,7 +13,8 @@ async def main():
             
             try:
                 # Локатор для lowest listing
-                lowest_listing = await page.locator('text=lowest listing').inner_text()
+                lowest_listing_element = await page.locator('text=lowest listing')
+                lowest_listing = await lowest_listing_element.inner_text()  # Получаем текст из элемента
                 print(f"Lowest listing: {lowest_listing}")
             except PlaywrightTimeoutError as e:
                 print(f"Ошибка: Не удалось найти элемент 'lowest listing' на странице. {e}")
