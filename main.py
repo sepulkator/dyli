@@ -1,40 +1,29 @@
 import asyncio
-import re
 from playwright.async_api import async_playwright
+import re
 
-async def fetch_lowest_listing_price():
+async def main():
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
         
-        # Переходим на страницу товара
-        await page.goto("https://www.dyli.io/drop/1930")  # Вставь нужный URL
+        # Перейти на страницу
+        await page.goto('https://www.dyli.io/drop/1930')
         
-        try:
-            # Ожидаем появления первого элемента с текстом "lowest listing"
-            lowest_listing_element = await page.locator('span:text("lowest listing")').first()
-            
-            # Находим родительский div для этого элемента
-            parent_div = await lowest_listing_element.locator('..')  # Это родительский элемент
-
-            # Ищем цену в родительском div
-            price_text = await parent_div.locator("span.font-bold").inner_text()
-            
-            # Преобразуем в число (с помощью регулярного выражения)
-            match = re.search(r"\$(\d+)", price_text)
-            if match:
-                price = match.group(1)
-                print(f"Lowest Listing Price: ${price}")
-            else:
-                print("Price not found.")
+        # Ждем, что элемент "lowest listing" появится на странице
+        element_locator = await page.locator('span:text("lowest listing")').first()  # Находим первый элемент с текстом "lowest listing"
+        parent_div = await element_locator.evaluate('el => el.closest("div")')  # Находим родительский div для этого элемента
         
-        except Exception as e:
-            print(f"Error: {e}")
+        # Получаем цену из родительского div
+        price_text = await parent_div.locator('span.font-bold').inner_text()  # Извлекаем текст из первого элемента span с классом font-bold
+        price = re.search(r"\$(\d+)", price_text)
+        
+        if price:
+            print(f"Lowest listing price: ${price.group(1)}")
+        else:
+            print("Price not found")
         
         await browser.close()
-
-async def main():
-    await fetch_lowest_listing_price()
 
 if __name__ == "__main__":
     asyncio.run(main())
