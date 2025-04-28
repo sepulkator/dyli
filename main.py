@@ -1,31 +1,32 @@
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 import asyncio
-from playwright.async_api import async_playwright
 
 async def main():
-    print("Скрипт запущен ✅")
-
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-        
-        # Здесь урл страницы на dyli
-        await page.goto("https://www.dyli.io/drop/1930")
-
-        # Немного подождём для уверенности (если нужно)
-        await page.wait_for_timeout(2000)
-
-        # Ищем нужный элемент по тексту
-        element = await page.locator("text=lowest listing").first()
-        if element:
-            price_text = await element.text_content()
-            print(f"Найденное значение: {price_text}")
-        else:
-            print("Не удалось найти элемент с текстом 'lowest listing'")
-
-        await browser.close()
-
-if __name__ == "__main__":
     try:
-        asyncio.run(main())
+        # Запуск Playwright
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            
+            # Переход на страницу
+            await page.goto("https://www.dyli.io/drop/1930")  # URL твоей страницы
+            
+            try:
+                # Локатор для lowest listing
+                lowest_listing = await page.locator('text=lowest listing').inner_text()
+                print(f"Lowest listing: {lowest_listing}")
+            except PlaywrightTimeoutError as e:
+                print(f"Ошибка: Не удалось найти элемент 'lowest listing' на странице. {e}")
+            except Exception as e:
+                print(f"Произошла неизвестная ошибка при извлечении данных: {e}")
+            
+            # Закрываем браузер
+            await browser.close()
+
+    except PlaywrightTimeoutError as e:
+        print(f"Ошибка: Истекло время ожидания при запуске или переходе на страницу: {e}")
     except Exception as e:
-        print(f"Ошибка при запуске: {e}")
+        print(f"Произошла ошибка при работе с Playwright: {e}")
+
+# Запуск асинхронной функции
+asyncio.run(main())
