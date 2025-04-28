@@ -14,13 +14,13 @@ async def main():
                         await page.goto("https://www.dyli.io/drop/1930", timeout=60000)
                         print("Страница успешно загружена.")
 
-                        # Ожидаем появления элемента с текстом "lowest listing"
+                        # Ожидаем появления элемента "lowest listing" с определенным классом
                         try:
-                            await page.wait_for_selector('span:has-text("lowest listing")', timeout=60000)
+                            await page.wait_for_selector('span.text-\[var\(--text-slate-700\)\]:has-text("lowest listing")', timeout=60000)
                             print("Элемент 'lowest listing' найден.")
 
-                            # Используем селектор, привязываясь к тексту "lowest listing" и следующему div с ценой
-                            price = await page.locator('div:has(span:has-text("lowest listing")) + div span.font-bold').text_content()
+                            # Используем селектор, привязываясь к этому span и следующему div с ценой
+                            price = await page.locator('div:has(span.text-\[var\(--text-slate-700\)\]:has-text("lowest listing")) + div span.font-bold').text_content()
                             print(f"Lowest listing price: {price}")
 
                         except Exception as e:
