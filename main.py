@@ -7,13 +7,13 @@ async def main():
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             page = await browser.new_page()
-            
+
             # Переход на страницу
             await page.goto("https://www.dyli.io/drop/1930")  # URL твоей страницы
             
             try:
-                # Локатор для lowest listing
-                lowest_listing_element = await page.locator('text=lowest listing')
+                # Ищем только первый элемент
+                lowest_listing_element = await page.locator('text=lowest listing').first()
                 lowest_listing = await lowest_listing_element.inner_text()  # Получаем текст из элемента
                 print(f"Lowest listing: {lowest_listing}")
             except PlaywrightTimeoutError as e:
