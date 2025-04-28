@@ -14,19 +14,29 @@ async def main():
                         await page.goto("https://www.dyli.io/drop/1930", timeout=60000)
                         print("Страница успешно загружена.")
 
-                        # Ожидаем появления и видимости элемента "lowest listing" с определенным классом
+                        # Выполняем JavaScript для получения текста цены
                         try:
-                            await page.wait_for_selector('span.text-\[var\(--text-slate-700\)\]:has-text("lowest listing")', state='visible', timeout=60000)
-                            print("Элемент 'lowest listing' найден и виден.")
+                            price = await page.evaluate('''() => {
+                                const lowestListingSpan = document.querySelector('span.text-\[var\(--text-slate-700\)\]:has-text("lowest listing")');
+                                if (lowestListingSpan) {
+                                    const parentDiv = lowestListingSpan.parentElement;
+                                    if (parentDiv) {
+                                        const priceSpan = parentDiv.querySelector('span.font-bold');
+                                        if (priceSpan) {
+                                            return priceSpan.textContent;
+                                        }
+                                    }
+                                }
+                                return null;
+                            }''')
 
-                            # Находим родительский элемент и затем элемент с ценой
-                            element_locator = await page.locator('span.text-\[var\(--text-slate-700\)\]:has-text("lowest listing")').first()
-                            parent_div = await element_locator.locator('..')
-                            price = await parent_div.locator('span.font-bold').text_content()
-                            print(f"Lowest listing price: {price}")
+                            if price:
+                                print(f"Lowest listing price (via JS): {price}")
+                            else:
+                                print("Не удалось найти цену 'lowest listing' с помощью JavaScript.")
 
                         except Exception as e:
-                            print(f"Ошибка при поиске или извлечении цены: {e}")
+                            print(f"Ошибка при выполнении JavaScript: {e}")
 
                     except Exception as e:
                         print(f"Ошибка при работе со страницей: {e}")
