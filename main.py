@@ -4,7 +4,7 @@ from playwright.async_api import async_playwright, expect
 import datetime
 import random
 
-print("Скрипт main.py запущен!")  # Добавили в самое начало
+print("Скрипт main.py запущен!")
 
 stop_flag = asyncio.Event()
 
@@ -17,13 +17,13 @@ async def main():
 
     try:
         async with async_playwright() as p:
-            print("Playwright инициализирован.")  # Добавили
+            print("Playwright инициализирован.")
             try:
                 browser = await p.chromium.launch(headless=True)
-                print("Браузер запущен.")  # Добавили
+                print("Браузер запущен.")
                 try:
                     page = await browser.new_page()
-                    print("Страница создана.")  # Добавили
+                    print("Страница создана.")
                     try:
                         await page.goto("https://www.dyli.io/drop/1930", timeout=60000)
                         print(f"[{datetime.datetime.now()}] Страница успешно загружена.")
