@@ -1,81 +1,80 @@
-import asyncio
-import signal
-from playwright.async_api import async_playwright, expect
-import datetime
-import random
+from playwright.sync_api import sync_playwright
+import time
+import logging
 
-print("Скрипт main.py запущен!")
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-stop_flag = asyncio.Event()
-
-def signal_handler(signum, frame):
-    print(f"[{datetime.datetime.now()}] Получен сигнал остановки ({signal.Signals(signum).name}).")
-    stop_flag.set()
-
-async def main():
-    signal.signal(signal.SIGTERM, signal_handler)
-
-    try:
-        async with async_playwright() as p:
-            print("Playwright инициализирован.")
-            try:
-                browser = await p.chromium.launch(headless=True)
-                print("Браузер запущен.")
-                try:
-                    page = await browser.new_page()
-                    print("Страница создана.")
-                    try:
-                        await page.goto("https://www.dyli.io/drop/1930", timeout=60000)
-                        print(f"[{datetime.datetime.now()}] Страница успешно загружена.")
-
-                        while not stop_flag.is_set():
-                            print(f"[{datetime.datetime.now()}] Начинаю проверку цены...")
-                            try:
-                                await page.wait_for_selector('span.text-\[var\(--text-slate-700\)\]:has-text("lowest listing")', timeout=10000)
-                                print(f"[{datetime.datetime.now()}] Элемент 'lowest listing' найден.")
-
-                                price = await page.evaluate('''() => {
-                                    const lowestListingSpan = document.querySelector('span.text-\[var\(--text-slate-700\)\]:has-text("lowest listing")');
-                                    if (lowestListingSpan) {
-                                        const parentDiv = lowestListingSpan.parentElement;
-                                        if (parentDiv) {
-                                            const priceSpan = parentDiv.querySelector('span.font-bold');
-                                            if (priceSpan) {
-                                                return priceSpan.textContent;
-                                            } else {
-                                                console.log('Не нашли span с классом "font-bold" в родительском элементе.');
-                                            }
-                                        } else {
-                                            console.log('У span "lowest listing" нет родительского элемента.');
-                                        }
-                                    } else {
-                                        console.log('Не нашли span с текстом "lowest listing".');
-                                    }
-                                    return null;
-                                }''')
-
-                                if price:
-                                    print(f"[{datetime.datetime.now()}] Lowest listing price (via JS): {price}")
-                                else:
-                                    print(f"[{datetime.datetime.now()}] Не удалось извлечь цену.")
-
-                            except Exception as e:
-                                print(f"[{datetime.datetime.now()}] Ошибка при проверке цены: {e}")
-
-                            await asyncio.sleep(5)
-
-                    except Exception as e:
-                        print(f"Ошибка при работе со страницей: {e}")
-                    finally:
-                        if browser and browser.is_connected:
-                            await browser.close()
-                            print(f"[{datetime.datetime.now()}] Браузер закрыт.")
-                except Exception as e:
-                    print(f"Ошибка при запуске браузера или создании страницы: {e}")
-            except Exception as e:
-                print(f"Ошибка при инициализации Playwright: {e}")
-    except Exception as e:
-        print(f"Общая ошибка в main: {e}")
+def scrape_lowest_price():
+    with sync_playwright() as p:
+        logger.info("Запуск браузера")
+        browser = p.chromium.launch(headless=True)
+        
+        try:
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"
+            )
+            page = context.new_page()
+            
+            logger.info("Переход на страницу https://www.dyli.io/drop/1930")
+            page.goto("https://www.dyli.io/drop/1930", wait_until="networkidle")
+            
+            # Даём странице немного времени для полной загрузки всех элементов
+            page.wait_for_timeout(2000)
+            
+            # Используем точный селектор на основе предоставленной HTML структуры
+            logger.info("Поиск элемента с ценой")
+            
+            # Ищем span с классом font-bold, который находится рядом со span, содержащим текст "lowest listing"
+            price_selector = "//span[contains(@class, 'font-bold')][following-sibling::span[contains(text(), 'lowest listing')]]"
+            
+            # Проверяем, существует ли элемент
+            if page.locator(price_selector).count() > 0:
+                lowest_price = page.locator(price_selector).inner_text()
+                logger.info(f"Найдена цена: {lowest_price}")
+                return lowest_price.strip()
+            else:
+                # Альтернативный селектор, если первый не сработал
+                logger.info("Первый селектор не сработал, пробуем альтернативный")
+                price_selector_alt = "//span[contains(text(), 'lowest listing')]/preceding-sibling::span[contains(@class, 'font-bold')]"
+                
+                if page.locator(price_selector_alt).count() > 0:
+                    lowest_price = page.locator(price_selector_alt).inner_text()
+                    logger.info(f"Найдена цена через альтернативный селектор: {lowest_price}")
+                    return lowest_price.strip()
+                
+                # Еще более простой селектор
+                logger.info("Пробуем прямой селектор по классу")
+                direct_selector = "span.font-bold"
+                
+                if page.locator(direct_selector).count() > 0:
+                    elements = page.locator(direct_selector).all()
+                    for element in elements:
+                        text = element.inner_text()
+                        if text.startswith("$"):
+                            logger.info(f"Найдена цена через прямой селектор: {text}")
+                            return text.strip()
+            
+            # Если ничего не нашли, делаем скриншот для диагностики
+            logger.warning("Не удалось найти элемент с ценой на странице")
+            page.screenshot(path="debug_screenshot.png")
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Произошла ошибка: {str(e)}")
+            return None
+        finally:
+            browser.close()
+            logger.info("Браузер закрыт")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    price = scrape_lowest_price()
+    if price:
+        print(f"Lowest price: {price}")
+    else:
+        print("Не удалось получить цену")
